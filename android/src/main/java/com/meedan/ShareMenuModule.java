@@ -49,39 +49,53 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
   private ReadableMap extractShared(Intent intent)  {
     String type = intent.getType();
 
-    if (type == null) {
-      return null;
-    }
-
-    String action = intent.getAction();
-
-    WritableMap data = Arguments.createMap();
-    data.putString(MIME_TYPE_KEY, type);
-
-    if (Intent.ACTION_SEND.equals(action)) {
-      if ("text/plain".equals(type)) {
-        data.putString(DATA_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
-        return data;
+      if (type == null) {
+        return null;
       }
 
-      Uri fileUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
-      if (fileUri != null) {
-        data.putString(DATA_KEY, fileUri.toString());
-        return data;
-      }
-    } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
-      ArrayList<Uri> fileUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
-      if (fileUris != null) {
-        WritableArray uriArr = Arguments.createArray();
-        for (Uri uri : fileUris) {
-          uriArr.pushString(uri.toString());
+      String action = intent.getAction();
+
+      WritableMap data = Arguments.createMap();
+      data.putString(MIME_TYPE_KEY, type);
+
+      ContentResolver cR = getReactApplicationContext().getContentResolver();
+
+      if (Intent.ACTION_SEND.equals(action)) {
+        if ("text/plain".equals(type)) {
+          WritableNativeMap writableNativeMap = new WritableNativeMap();
+          writableNativeMap.putString("data",intent.getStringExtra(Intent.EXTRA_TEXT));
+          writableNativeMap.putString("mimeType","text/plain");
+          data.putMap(DATA_KEY, writableNativeMap);
+          return data;
         }
-        data.putArray(DATA_KEY, uriArr);
-        return data;
-      }
-    }
 
-    return null;
+        Uri fileUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        if (fileUri != null) {
+          String fileName = DocumentFile.fromSingleUri(this.getReactApplicationContext(),fileUri).getName();
+          WritableNativeMap writableNativeMap = new WritableNativeMap();
+          writableNativeMap.putString("data",fileUri.toString());
+          writableNativeMap.putString("mimeType",cR.getType(fileUri));
+          writableNativeMap.putString("fileName",fileName);
+          data.putMap(DATA_KEY, writableNativeMap);
+          return data;
+        }
+      } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+        ArrayList<Uri> fileUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+        if (fileUris != null) {
+          WritableArray uriArr = Arguments.createArray();
+          for (Uri uri : fileUris) {
+            String fileName = DocumentFile.fromSingleUri(this.getReactApplicationContext(),uri).getName();
+            WritableNativeMap writableNativeMap = new WritableNativeMap();
+            writableNativeMap.putString("data",uri.toString());
+            writableNativeMap.putString("mimeType",cR.getType(uri));
+            writableNativeMap.putString("fileName",fileName);
+            uriArr.pushMap(writableNativeMap);
+          }
+          data.putArray(DATA_KEY, uriArr);
+          return data;
+        }
+      }
+      return null;
   }
 
   @ReactMethod
