@@ -184,15 +184,17 @@ class ShareViewController: SLComposeServiceViewController {
       let mimeType = url.extractMimeType()
       let fileExtension = url.pathExtension
       let fileName = UUID().uuidString
+      let fileRealName = url.lastPathComponent
       let filePath = groupFileManagerContainer
         .appendingPathComponent("\(fileName).\(fileExtension)")
+      print("fileName of file \(fileName)")
       
       guard self.moveFileToDisk(from: url, to: filePath) else {
         self.exit(withError: COULD_NOT_SAVE_FILE_ERROR)
         return
       }
       
-      self.sharedItems.append([DATA_KEY: filePath.absoluteString, MIME_TYPE_KEY: mimeType])
+      self.sharedItems.append([FILE_NAME_KEY:fileRealName, DATA_KEY: filePath.absoluteString, MIME_TYPE_KEY: mimeType])
       semaphore.signal()
     }
   }
